@@ -85,7 +85,11 @@ fun AuctionScreen(
                     if (t.id == winnerId) {
                         t.copy(
                             purse = t.purse - currentBid,
-                            squad = t.squad + currentPlayer
+                            squad = t.squad + currentPlayer.copy(
+                                boughtFor = currentBid,
+                                marketValue = currentBid * 1.1,
+                                teamName = t.name
+                            )
                         )
                     } else t
                 }

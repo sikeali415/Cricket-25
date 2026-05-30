@@ -72,6 +72,8 @@ export interface Player {
     injurySeasonsRemaining?: number;
     fitness?: number;
     basePrice?: number;
+    marketValue?: number;
+    boughtFor?: number;
     bowlingSubType?: BowlingSubType;
     weaknesses?: BowlingSubType[];
     isFinisher?: boolean;

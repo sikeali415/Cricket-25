@@ -42,10 +42,16 @@ const PreMatchPanel = ({ match, gameData, onStart }: { match: Match, gameData: G
     const teamB = gameData.teams.find(t => t.name === match.teamB);
     const ground = gameData.grounds.find(g => g.code === (gameData.allTeamsData.find(t => t.name === match.teamA)?.homeGround || 'KCG'));
     
-    // Basic prediction logic
+    // Improved prediction logic: points + team skill
+    const getTeamStrength = (team: any) => {
+        if (!team) return 50;
+        return team.squad.reduce((acc: number, p: any) => acc + Math.max(p.battingSkill, p.secondarySkill), 0) / (team.squad.length || 1);
+    };
     const teamARank = gameData.standings[gameData.currentFormat].find(s => s.teamId === teamA?.id)?.points || 0;
     const teamBRank = gameData.standings[gameData.currentFormat].find(s => s.teamId === teamB?.id)?.points || 0;
-    const winProbA = 50 + (teamARank - teamBRank) * 2;
+    const strengthA = getTeamStrength(teamA);
+    const strengthB = getTeamStrength(teamB);
+    const winProbA = 50 + (teamARank - teamBRank) * 5 + (strengthA - strengthB) * 2;
 
     const getWeatherIcon = (w?: string) => {
         switch(w) {
@@ -306,15 +312,21 @@ const PostTossInfoScreen = ({ state, gameData, onProceed }: { state: LiveMatchSt
                                     <p className="text-[9px] text-slate-500 uppercase font-black mb-2 tracking-widest">In-Form Batters</p>
                                     {inFormA.batters.map(p => {
                                         const h2h = gameData.records.playerVsTeam?.find(r => r.playerId === p.id && r.vsTeamId === teamB.id) || { runs: 0 };
+                                        const careerStats = p.stats[gameData.currentFormat];
                                         return (
                                             <div key={p.id} className="flex justify-between items-center mb-2 pb-1 border-b border-slate-700/30">
                                                 <div className="flex flex-col">
-                                                    <span className="text-sm font-bold text-white">{p.name}</span>
-                                                    <span className="text-[9px] text-slate-500">Season: {p.stats[gameData.currentFormat]?.runs || 0}r</span>
+                                                    <div className="flex items-center gap-1">
+                                                        <span className="text-sm font-bold text-white">{p.name}</span>
+                                                        <span className="text-[8px] bg-slate-700 text-slate-400 px-1 rounded uppercase">{p.role}</span>
+                                                    </div>
+                                                    <span className="text-[9px] text-slate-500">
+                                                        {careerStats?.matches > 0 ? `Career: ${careerStats.runs}r (${careerStats.average.toFixed(1)})` : 'Debut Season'}
+                                                    </span>
                                                 </div>
                                                 <div className="text-right">
-                                                    <div className="text-teal-400 font-black text-xs">{h2h.runs}</div>
-                                                    <div className="text-[8px] text-slate-600 uppercase font-bold">Vs {teamB.name.slice(0,3)}</div>
+                                                    <div className="text-teal-400 font-black text-xs">{(p.stats[gameData.currentFormat]?.runs || 0)}r</div>
+                                                    <div className="text-[8px] text-slate-600 uppercase font-bold">Vs {teamB.name.slice(0,3)}: {h2h.runs}r</div>
                                                 </div>
                                             </div>
                                         );
@@ -324,15 +336,21 @@ const PostTossInfoScreen = ({ state, gameData, onProceed }: { state: LiveMatchSt
                                     <p className="text-[9px] text-slate-500 uppercase font-black mb-2 tracking-widest">In-Form Bowlers</p>
                                     {inFormA.bowlers.map(p => {
                                         const h2h = gameData.records.playerVsTeam?.find(r => r.playerId === p.id && r.vsTeamId === teamB.id) || { wickets: 0 };
+                                        const careerStats = p.stats[gameData.currentFormat];
                                         return (
                                             <div key={p.id} className="flex justify-between items-center mb-2 pb-1 border-b border-slate-700/30">
                                                 <div className="flex flex-col">
-                                                    <span className="text-sm font-bold text-white">{p.name}</span>
-                                                    <span className="text-[9px] text-slate-500">Season: {p.stats[gameData.currentFormat]?.wickets || 0}w</span>
+                                                    <div className="flex items-center gap-1">
+                                                        <span className="text-sm font-bold text-white">{p.name}</span>
+                                                        <span className="text-[8px] bg-slate-700 text-slate-400 px-1 rounded uppercase">{p.role}</span>
+                                                    </div>
+                                                    <span className="text-[9px] text-slate-500">
+                                                        {careerStats?.matches > 0 ? `Career: ${careerStats.wickets}w (${careerStats.economy.toFixed(1)}e)` : 'Debut Season'}
+                                                    </span>
                                                 </div>
                                                 <div className="text-right">
-                                                    <div className="text-cyan-400 font-black text-xs">{h2h.wickets}</div>
-                                                    <div className="text-[8px] text-slate-600 uppercase font-bold">Vs {teamB.name.slice(0,3)}</div>
+                                                    <div className="text-cyan-400 font-black text-xs">{(p.stats[gameData.currentFormat]?.wickets || 0)}w</div>
+                                                    <div className="text-[8px] text-slate-600 uppercase font-bold">Vs {teamB.name.slice(0,3)}: {h2h.wickets}w</div>
                                                 </div>
                                             </div>
                                         );

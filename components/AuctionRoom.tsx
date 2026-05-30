@@ -158,6 +158,12 @@ const AuctionRoom: React.FC<AuctionRoomProps> = ({ gameData, onAuctionComplete }
         setCurrentPlayerIdx(prev => prev + 1);
     };
 
+    const calculateAutoAuctionPrice = (basePrice: number) => {
+        if (basePrice <= 0.50) return Number((basePrice * (5 + Math.random() * 3)).toFixed(2));
+        if (basePrice <= 1.0) return Number((4 + Math.random() * 5).toFixed(2));
+        return Number((10 + Math.random() * 20).toFixed(2));
+    };
+
     const autoAuctionRemaining = () => {
         setIsAuctioning(false);
         setIsProcessing(true);
@@ -170,7 +176,7 @@ const AuctionRoom: React.FC<AuctionRoomProps> = ({ gameData, onAuctionComplete }
                     return {
                         ...t,
                         purse: Number((t.purse - currentBid).toFixed(2)),
-                        squad: [...t.squad, currentPlayer]
+                        squad: [...t.squad, { ...currentPlayer, boughtFor: currentBid, marketValue: Number((currentBid * 1.1).toFixed(2)), teamName: t.name }]
                     };
                 }
                 return t;
@@ -185,13 +191,17 @@ const AuctionRoom: React.FC<AuctionRoomProps> = ({ gameData, onAuctionComplete }
 
         const finalTeams = workingTeams.map(team => {
             const squad = [...team.squad];
+            let purse = team.purse;
             while (squad.length < MIN_SIZE && poolIdx < availablePool.length) {
                 const p = availablePool[poolIdx++];
                 if (!p.isForeign || squad.filter(player => player.isForeign).length < MAX_FOREIGN_LIMIT) {
-                    squad.push(p);
+                    const price = calculateAutoAuctionPrice(p.basePrice || 0.25);
+                    const finalPrice = purse >= price ? price : (p.basePrice || 0.25);
+                    squad.push({ ...p, boughtFor: finalPrice, marketValue: Number((finalPrice * 1.1).toFixed(2)), teamName: team.name });
+                    purse = Number((purse - finalPrice).toFixed(2));
                 }
             }
-            return { ...team, squad };
+            return { ...team, squad, purse: Math.max(0, purse) };
         });
 
         setTeams(finalTeams);
@@ -259,7 +269,7 @@ const AuctionRoom: React.FC<AuctionRoomProps> = ({ gameData, onAuctionComplete }
                     return {
                         ...t,
                         purse: Number((t.purse - currentBid).toFixed(2)),
-                        squad: [...t.squad, currentPlayer]
+                        squad: [...t.squad, { ...currentPlayer, boughtFor: currentBid, marketValue: Number((currentBid * 1.1).toFixed(2)), teamName: t.name }]
                     };
                 }
                 return t;

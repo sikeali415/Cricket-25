@@ -67,6 +67,8 @@ data class Player(
     val teamName: String? = null,
     val stats: Map<Format, PlayerStats> = emptyMap(),
     val basePrice: Double = 0.0,
+    val marketValue: Double = 0.0,
+    val boughtFor: Double = 0.0,
     val bowlingSubType: BowlingSubType = BowlingSubType.none
 )
 

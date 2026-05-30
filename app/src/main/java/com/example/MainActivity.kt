@@ -22,13 +22,32 @@ import com.example.domain.AppState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 
+import androidx.room.Room
+import com.example.data.persistence.AppDatabase
+import com.example.data.persistence.GameRepository
+import androidx.lifecycle.ViewModelProvider
+
+import androidx.activity.enableEdgeToEdge
+
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     enableEdgeToEdge()
+    
+    val db = Room.databaseBuilder(
+      applicationContext,
+      AppDatabase::class.java, "cricket_manager_db"
+    ).build()
+    val repository = GameRepository(db.gameSaveDao())
+    val factory = object : ViewModelProvider.Factory {
+      override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+        return MainViewModel(repository) as T
+      }
+    }
+
     setContent {
       MyApplicationTheme {
-        val viewModel: MainViewModel = viewModel()
+        val viewModel: MainViewModel = viewModel(factory = factory)
         val gameState by viewModel.gameState.collectAsState()
         val gameData by viewModel.gameData.collectAsState()
         

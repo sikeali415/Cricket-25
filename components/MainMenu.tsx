@@ -44,7 +44,15 @@ const MainMenu: React.FC<MainMenuProps> = ({ onStartNewGame, onResumeGame, hasSa
         <div className="relative z-10 text-center">
             <h2 className="text-xl font-bold text-yellow-600 dark:text-yellow-400">Sike's</h2>
             <h1 className="text-5xl font-extrabold text-gray-900 dark:text-white mb-2 tracking-tight">CRICKET MANAGER</h1>
-            <h2 className="text-5xl font-extrabold text-teal-600 dark:text-teal-400 mb-12">25</h2>
+            <h2 className="text-5xl font-extrabold text-teal-600 dark:text-teal-400 mb-4">26</h2>
+            
+            {/* PWA / Offline Status */}
+            {!window.navigator.onLine && (
+                <div className="bg-rose-500/20 text-rose-500 px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-rose-500/20 mb-8 inline-block">
+                    Offline Mode Active
+                </div>
+            )}
+            
             <div className="space-y-4">
                 {hasSaveData && (
                     <button

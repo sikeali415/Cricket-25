@@ -208,12 +208,21 @@ fun AuctionScreen(
                     .background(Slate900)
                     .padding(16.dp)
             ) {
-                Text(
-                    text = "LIVE ACTIVITY FEED",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color.Gray,
-                    fontWeight = FontWeight.Bold
-                )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "LIVE ACTIVITY FEED",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.Gray,
+                            fontWeight = FontWeight.Bold
+                        )
+                        TextButton(onClick = { onAuctionComplete(teams) }) {
+                            Text("FAST AUTO-FILL", color = Color.Red, style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
                 Spacer(modifier = Modifier.height(8.dp))
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     items(biddingLog) { log ->
@@ -252,19 +261,25 @@ fun AuctionScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    Text("🏠", fontSize = 64.sp)
+                    Text("📋", fontSize = 64.sp)
                     Text(
                         "DRAFT COMPLETED",
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Black,
                         color = Color.White
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        "Finalizing rosters and auto-filling squads...",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.Gray
+                    )
+                    Spacer(modifier = Modifier.height(32.dp))
                     Button(
                         onClick = { onAuctionComplete(teams) },
+                        modifier = Modifier.height(56.dp).fillMaxWidth(0.6f),
                         colors = ButtonDefaults.buttonColors(containerColor = Teal500)
                     ) {
-                        Text("PROCEED TO HUB", fontWeight = FontWeight.Bold)
+                        Text("FINALIZE & PROCEED", fontWeight = FontWeight.Bold)
                     }
                 }
             } else if (currentPlayer != null) {

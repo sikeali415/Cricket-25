@@ -17,7 +17,7 @@ export const MIN_SQUAD_SIZE = 12;
 export const MAX_FOREIGN_PLAYERS = 5;
 
 const GAME_VERSION = "26 Beta";
-const GAME_TITLE = "Cricket manager " + GAME_VERSION;
+const GAME_TITLE = "Cricket Manager " + GAME_VERSION;
 
 export const App = () => {
   const [appState, setAppState] = useState<AppState>('MAIN_MENU');

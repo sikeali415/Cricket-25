@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Player, Team, GameData, PlayerRole, Format } from '../types';
+import { Player, Team, GameData, PlayerRole, AppState } from '../types';
 import { getRoleColor, getRoleFullName } from '../utils';
 import { Icons } from './Icons';
 
@@ -117,7 +117,7 @@ const AuctionRoom: React.FC<AuctionRoomProps> = ({ gameData, onAuctionComplete }
         if (auctionFinished || isProcessing) return;
 
         if (currentPlayerIdx >= initialSortedPool.length) {
-            setAuctionFinished(true);
+            autoAuctionRemaining();
             return;
         }
 
@@ -161,8 +161,42 @@ const AuctionRoom: React.FC<AuctionRoomProps> = ({ gameData, onAuctionComplete }
     const autoAuctionRemaining = () => {
         setIsAuctioning(false);
         setIsProcessing(true);
+        
+        // Finalize current lot if bidder exists
+        let workingTeams = [...teams];
+        if (highestBidderId && currentPlayer) {
+            workingTeams = workingTeams.map(t => {
+                if (t.id === highestBidderId) {
+                    return {
+                        ...t,
+                        purse: Number((t.purse - currentBid).toFixed(2)),
+                        squad: [...t.squad, currentPlayer]
+                    };
+                }
+                return t;
+            });
+        }
+
+        // Fill remaining players for ALL teams to reach minimum squad size (14 for now)
+        const MIN_SIZE = 14;
+        const usedPlayerIds = new Set(workingTeams.flatMap(t => t.squad.map(p => p.id)));
+        const availablePool = initialSortedPool.filter(p => !usedPlayerIds.has(p.id));
+        let poolIdx = 0;
+
+        const finalTeams = workingTeams.map(team => {
+            const squad = [...team.squad];
+            while (squad.length < MIN_SIZE && poolIdx < availablePool.length) {
+                const p = availablePool[poolIdx++];
+                if (!p.isForeign || squad.filter(player => player.isForeign).length < MAX_FOREIGN_LIMIT) {
+                    squad.push(p);
+                }
+            }
+            return { ...team, squad };
+        });
+
+        setTeams(finalTeams);
         setAuctionFinished(true);
-        onAuctionComplete(teams); // In a real app we'd auto-fill here, but for now we just finish
+        onAuctionComplete(finalTeams);
     };
 
     useEffect(() => {

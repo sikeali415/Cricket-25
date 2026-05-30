@@ -86,6 +86,10 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
 
     const { runSimulationForCurrentFormat, updateStatsFromMatch } = useSimulation(gameData, setGameData);
 
+    const userTeam = useMemo(() => {
+        return gameData.teams.find(t => t.id === gameData.userTeamId) || gameData.teams[0];
+    }, [gameData]);
+
     const optimizeAllSquads = () => {
         if (!gameData) return;
         setGameData(prev => {
@@ -217,10 +221,6 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
              }
         }
     }, [gameData, setGameData, userTeam, showFeedback]);
-
-    const userTeam = useMemo(() => {
-        return gameData.teams.find(t => t.id === gameData.userTeamId) || gameData.teams[0];
-    }, [gameData]);
 
     useEffect(() => {
         const schedule = gameData.schedule[gameData.currentFormat];

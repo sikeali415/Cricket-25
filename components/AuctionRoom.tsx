@@ -202,10 +202,11 @@ const AuctionRoom: React.FC<AuctionRoomProps> = ({ gameData, onAuctionComplete }
                 if (teamPool.length === 0) break;
                 
                 const p = teamPool[0];
-                const price = calculateAutoAuctionPrice(p.basePrice || 0.25);
-                const finalPrice = Math.max(0.1, purse >= price ? price : (p.basePrice || 0.25));
+                const bp = (p.basePrice || getPlayerBasePrice(p) || 0.25);
+                const price = calculateAutoAuctionPrice(bp);
+                const finalPrice = Math.max(0.1, purse >= price ? price : bp);
                 
-                const newPlayer = { ...p, boughtFor: finalPrice, marketValue: Number((finalPrice * 1.1).toFixed(2)), teamName: team.name };
+                const newPlayer = { ...p, basePrice: bp, boughtFor: finalPrice, marketValue: Number((finalPrice * 1.1).toFixed(2)), teamName: team.name };
                 squad.push(newPlayer);
                 usedPlayerIds.add(p.id);
                 purse = Number((purse - finalPrice).toFixed(2));

@@ -172,18 +172,51 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
     };
 
     useEffect(() => {
-        if (gameData && (!gameData.sponsorships || !gameData.popularity || !gameData.news)) {
+        if (gameData && (!gameData.sponsorships || !gameData.popularity || !gameData.news || (userTeam && userTeam.purse < -100))) {
              setGameData(prev => {
                  if (!prev) return null;
+                 
+                 // Fix potentially bugged purse
+                 const fixedTeams = prev.teams.map(t => {
+                     if (t.purse < -100) {
+                        return { ...t, purse: 50.0 }; // Reset to a safe value
+                     }
+                     
+                     // Force fix prices in current squads too
+                     const fixedSquad = t.squad.map(p => {
+                         const nativeBase = getPlayerBasePrice(p);
+                         if (p.basePrice && p.basePrice > 20.0) {
+                             return { ...p, basePrice: nativeBase };
+                         }
+                         return p;
+                     });
+                     return { ...t, squad: fixedSquad };
+                 });
+
+                 // Fix allPlayers registry too
+                 const fixedAllPlayers = prev.allPlayers.map(p => {
+                     const nativeBase = getPlayerBasePrice(p);
+                     if (p.basePrice && p.basePrice > 20.0) {
+                         return { ...p, basePrice: nativeBase };
+                     }
+                     return p;
+                 });
+
                  return {
                      ...prev,
+                     teams: fixedTeams,
+                     allPlayers: fixedAllPlayers,
                      popularity: prev.popularity ?? 50,
                      sponsorships: prev.sponsorships ?? INITIAL_SPONSORSHIPS,
                      news: prev.news ?? INITIAL_NEWS
                  };
              });
+             
+             if (userTeam && userTeam.purse < -100) {
+                 showFeedback("Financial Audit Complete: Resetting bugged negative budget.", "success");
+             }
         }
-    }, [gameData, setGameData]);
+    }, [gameData, setGameData, userTeam, showFeedback]);
 
     const userTeam = useMemo(() => {
         return gameData.teams.find(t => t.id === gameData.userTeamId) || gameData.teams[0];
@@ -554,21 +587,17 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
                 }
 
                 const updatedSquad = currentSquad.map(p => {
-                    const nextPrice = calculateRetentionPrice(p);
-                    const newStats = { ...p.stats };
-                    // Reset stats for new season but keep history? Usually we reset for the 'league' view.
-                    // The core stats are format-based, maybe we keep them and add a 'career' log later.
-                    // For now, let's just update the price.
-                    
+                    // CRITICAL FIX: Do NOT overwrite basePrice with multiplier-applied price
+                    // We just reset injury and keep basePrice as it is (derived or stored)
                     if (p.injury && p.injury.durationType === 'seasons') {
                         const nextDuration = p.injury.durationValue - 1;
                         if (nextDuration <= 0) {
-                            return { ...p, injury: null, basePrice: nextPrice };
+                            return { ...p, injury: null };
                         } else {
-                            return { ...p, injury: { ...p.injury, durationValue: nextDuration }, basePrice: nextPrice };
+                            return { ...p, injury: { ...p.injury, durationValue: nextDuration } };
                         }
                     }
-                    return { ...p, basePrice: nextPrice };
+                    return p;
                 });
 
                 return {
@@ -579,11 +608,16 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
                 };
             });
 
-            // Update all players prices and injuries
+            // Update all players - FIX: Stop overwriting basePrice
             const updatedAllPlayers = prevData.allPlayers.map(p => {
-                const nextPrice = calculateRetentionPrice(p);
-                let pUpdated = { ...p, basePrice: nextPrice };
+                let pUpdated = { ...p };
                 
+                // If basePrice is insanely high (bugged), reset it
+                const nativeBase = getPlayerBasePrice(p);
+                if (p.basePrice && p.basePrice > 20.0) {
+                    pUpdated.basePrice = nativeBase;
+                }
+
                 if (p.injury && p.injury.durationType === 'seasons') {
                     const nextDuration = p.injury.durationValue - 1;
                     if (nextDuration <= 0) {

@@ -376,9 +376,48 @@ export const generateMatchNews = (result: MatchResult, format: string, sponsorsh
     id: `news-${(Date.now())}`, headline: `Match Result: ${result.summary}`, date: new Date().toLocaleDateString(), excerpt: result.summary, content: result.summary, type: 'match'
 });
 
-export const generatePreMatchNews = (match: Match, gameData: GameData): NewsArticle => ({
-    id: `news-pre-${(Date.now())}`, headline: `Upcoming: ${match.teamA} vs ${match.teamB}`, date: new Date().toLocaleDateString(), excerpt: "Pre-match preview.", content: "Full preview content.", type: 'match'
-});
+export const generatePreMatchNews = (match: Match, gameData: GameData): NewsArticle => {
+    const teamA = gameData.teams.find(t => t.name === match.teamA);
+    const teamB = gameData.teams.find(t => t.name === match.teamB);
+    const ground = gameData.grounds.find(g => g.code === (gameData.allTeamsData.find(t => t.name === match.teamA)?.homeGround));
+    
+    // Key performers based on skill
+    const starA = teamA?.squad.sort((a,b) => (b.battingSkill + b.secondarySkill) - (a.battingSkill + a.secondarySkill))[0];
+    const starB = teamB?.squad.sort((a,b) => (b.battingSkill + b.secondarySkill) - (a.battingSkill + a.secondarySkill))[0];
+
+    const content = `
+        <div class="space-y-4 font-sans text-xs">
+            <p className="leading-relaxed">The stage is set at <strong class="text-teal-500">${ground?.name || 'TBD'}</strong> for a high-octane clash between <strong>${match.teamA}</strong> and <strong>${match.teamB}</strong>.</p>
+            
+            <div class="grid grid-cols-2 gap-3 mt-4">
+                <div class="bg-blue-50/50 dark:bg-blue-900/10 p-3 rounded-xl border border-blue-200 dark:border-blue-800">
+                    <h4 class="text-[9px] font-black uppercase text-blue-600 dark:text-blue-400 mb-1 leading-none">Key Target: ${match.teamA}</h4>
+                    <p class="text-[11px] font-bold text-slate-900 dark:text-slate-100">${starA?.name || 'Champion'}</p>
+                    <p class="text-[9px] text-slate-500 uppercase mt-0.5">${getRoleFullName(starA?.role || PlayerRole.BATSMAN)}</p>
+                </div>
+                <div class="bg-red-50/50 dark:bg-red-900/10 p-3 rounded-xl border border-red-200 dark:border-red-800">
+                    <h4 class="text-[9px] font-black uppercase text-red-600 dark:text-red-400 mb-1 leading-none">Key Target: ${match.teamB}</h4>
+                    <p class="text-[11px] font-bold text-slate-900 dark:text-slate-100">${starB?.name || 'Champion'}</p>
+                    <p class="text-[9px] text-slate-500 uppercase mt-0.5">${getRoleFullName(starB?.role || PlayerRole.BATSMAN)}</p>
+                </div>
+            </div>
+
+            <div class="p-3 bg-teal-50/50 dark:bg-teal-900/10 rounded-xl border border-teal-200 dark:border-teal-800 mt-4">
+                <h4 class="text-[9px] font-black uppercase text-teal-600 dark:text-teal-400 mb-1 leading-none">📊 Tactical Forecast</h4>
+                <p class="text-[10px] leading-relaxed text-slate-600 dark:text-slate-400 italic">"Analysts suggest a <strong>${ground?.pitch || 'Sporting'}</strong> surface today. ${match.teamA} has shown superior death-overs execution while ${match.teamB} relies on their top-order blitz."</p>
+            </div>
+        </div>
+    `;
+
+    return {
+        id: `news-pre-${(Date.now())}`,
+        headline: `${match.teamA} vs ${match.teamB}: Tactical Preview`,
+        date: new Date().toLocaleDateString(),
+        excerpt: `Heavyweight clash at ${ground?.name || 'TBD'} as elite squads finalize their strategies.`,
+        content: content,
+        type: 'match'
+    };
+};
 
 export interface PlayerRanking {
     player: Player;

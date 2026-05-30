@@ -185,21 +185,30 @@ const AuctionRoom: React.FC<AuctionRoomProps> = ({ gameData, onAuctionComplete }
 
         // Fill remaining players for ALL teams to reach minimum squad size (14 for now)
         const MIN_SIZE = 14;
-        const usedPlayerIds = new Set(workingTeams.flatMap(t => t.squad.map(p => p.id)));
-        const availablePool = initialSortedPool.filter(p => !usedPlayerIds.has(p.id));
-        let poolIdx = 0;
-
+        let usedPlayerIds = new Set(workingTeams.flatMap(t => t.squad.map(p => p.id)));
+        
         const finalTeams = workingTeams.map(team => {
             const squad = [...team.squad];
             let purse = team.purse;
-            while (squad.length < MIN_SIZE && poolIdx < availablePool.length) {
-                const p = availablePool[poolIdx++];
-                if (!p.isForeign || squad.filter(player => player.isForeign).length < MAX_FOREIGN_LIMIT) {
-                    const price = calculateAutoAuctionPrice(p.basePrice || 0.25);
-                    const finalPrice = purse >= price ? price : (p.basePrice || 0.25);
-                    squad.push({ ...p, boughtFor: finalPrice, marketValue: Number((finalPrice * 1.1).toFixed(2)), teamName: team.name });
-                    purse = Number((purse - finalPrice).toFixed(2));
-                }
+            
+            // Re-filter available pool for each team starting from remaining players
+            const getAvailableForTeam = () => initialSortedPool.filter(p => 
+                !usedPlayerIds.has(p.id) && 
+                (!p.isForeign || squad.filter(px => px.isForeign).length < MAX_FOREIGN_LIMIT)
+            );
+
+            while (squad.length < MIN_SIZE) {
+                const teamPool = getAvailableForTeam();
+                if (teamPool.length === 0) break;
+                
+                const p = teamPool[0];
+                const price = calculateAutoAuctionPrice(p.basePrice || 0.25);
+                const finalPrice = Math.max(0.1, purse >= price ? price : (p.basePrice || 0.25));
+                
+                const newPlayer = { ...p, boughtFor: finalPrice, marketValue: Number((finalPrice * 1.1).toFixed(2)), teamName: team.name };
+                squad.push(newPlayer);
+                usedPlayerIds.add(p.id);
+                purse = Number((purse - finalPrice).toFixed(2));
             }
             return { ...team, squad, purse: Math.max(0, purse) };
         });

@@ -61,7 +61,7 @@ const PlayerProfile: React.FC<PlayerProfileProps> = ({ player, onBack, initialFo
                 <div className="mb-6 grid grid-cols-3 gap-3">
                     <div className="bg-slate-100 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200 dark:border-slate-700 text-center">
                         <p className="text-[10px] text-slate-500 uppercase font-black mb-1">Base Price</p>
-                        <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{player.basePrice ? `${player.basePrice.toFixed(2)} Cr` : 'N/A'}</p>
+                        <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{(player.basePrice || getPlayerBasePrice(player)).toFixed(2)} Cr</p>
                     </div>
                     <div className="bg-teal-500/10 dark:bg-teal-500/5 p-3 rounded-xl border border-teal-500/20 text-center">
                         <p className="text-[10px] text-teal-600 dark:text-teal-400 uppercase font-black mb-1">Market Value</p>

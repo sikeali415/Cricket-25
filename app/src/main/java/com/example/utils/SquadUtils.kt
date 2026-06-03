@@ -43,19 +43,25 @@ object SquadUtils {
             while (currentSquad.size < MIN_SQUAD_SIZE) {
                 val role = PlayerRole.values().random()
                 val isOpener = role == PlayerRole.BATSMAN && Random.nextBoolean()
-                val skill = Random.nextInt(45, 62)
+                val skill = if (Random.nextInt(50) > 40) Random.nextInt(55, 64) else Random.nextInt(45, 62)
                 val secSkill = if (role == PlayerRole.ALL_ROUNDER) Random.nextInt(40, 58) else Random.nextInt(5, 30)
+                
+                // Skill cap is mainly for veteran generated players if age > 34
+                val age = Random.nextInt(18, 38)
+                val cappedSkill = if (age > 34 && skill > 64) 64 else skill
+                val cappedSecSkill = if (age > 34 && secSkill > 64) 64 else secSkill
+
                 val basePrice = 0.20
                 val boughtPrice = calculateAutoAuctionPrice(basePrice)
 
                 val newPlayer = Player(
                     id = "gen-${UUID.randomUUID()}",
                     name = generateRandomName(),
-                    age = Random.nextInt(18, 24),
+                    age = age,
                     nationality = "Local",
                     role = role,
-                    battingSkill = if (role == PlayerRole.BATSMAN || role == PlayerRole.ALL_ROUNDER) skill else Random.nextInt(10, 25),
-                    secondarySkill = if (role != PlayerRole.BATSMAN) secSkill else 0,
+                    battingSkill = if (role == PlayerRole.BATSMAN || role == PlayerRole.ALL_ROUNDER) cappedSkill else Random.nextInt(10, 25),
+                    secondarySkill = if (role != PlayerRole.BATSMAN) cappedSecSkill else 0,
                     isOpener = isOpener,
                     isForeign = false,
                     basePrice = basePrice,

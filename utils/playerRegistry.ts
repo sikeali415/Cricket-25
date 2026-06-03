@@ -86,14 +86,22 @@ export const parseRawData = (data: RawPlayerData[]): Player[] => {
         // Check if role was SB but mapping said BL
         const finalRole = p.role === 'SB' ? PlayerRole.SPIN_BOWLER : role;
 
+        // Apply skill cap for older players (Age > 34)
+        let batting = p.batting;
+        let bowling = p.bowling;
+        if (p.age > 34) {
+            if (batting > 64) batting = 64;
+            if (bowling > 64) bowling = 64;
+        }
+
         return {
             id: p.id,
             name: p.name,
             age: p.age,
             nationality: p.nationality,
             role: finalRole,
-            battingSkill: p.batting,
-            secondarySkill: p.bowling,
+            battingSkill: batting,
+            secondarySkill: bowling,
             style: style,
             isOpener: p.pos?.includes('OP') || false,
             isForeign: p.isForeign,
@@ -113,19 +121,46 @@ export const RAW_DATA_INTERNATIONAL: RawPlayerData[] = [
     { id: 'int-au-3', name: 'Arjun Malhotra', age: 27, nationality: 'India', role: 'BT', batting: 78, bowling: 0, style: 'A', isForeign: true, pos: 'OP', traits: ['Powerplay Enforcer'] },
     { id: 'int-au-4', name: 'Jan Steenkamp', age: 29, nationality: 'South Africa', role: 'BL', batting: 12, bowling: 85, style: 'N', isForeign: true, traits: ['Enforcer Bouncer'], weakness: 'fbs' },
     { id: 'int-au-5', name: 'Chris Jordan-Wells', age: 33, nationality: 'England', role: 'BL', batting: 10, bowling: 88, style: 'N', isForeign: true, traits: ['The Glass Cannon'], weakness: 'fb' },
-    { id: 'int-au-6', name: 'Arjun Malhotra', age: 27, nationality: 'India', role: 'BT', batting: 78, bowling: 0, style: 'A', isForeign: true, pos: 'OP', traits: ['Powerplay Enforcer'] },
     { id: 'int-au-7', name: 'Akash Thakur', age: 26, nationality: 'India', role: 'BL', batting: 15, bowling: 80, style: 'N', isForeign: true, traits: ['Powerplay Specialist'], weakness: 'mv' },
     { id: 'int-au-8', name: 'Sam Callaway', age: 25, nationality: 'England', role: 'AR', batting: 62, bowling: 66, style: 'N', isForeign: true, traits: ['Matchup Dependent'] },
     { id: 'int-au-10', name: 'Asela Jayasundera', age: 32, nationality: 'Sri Lanka', role: 'SB', batting: 18, bowling: 75, style: 'D', isForeign: true, traits: ['Subcontinent Squeeze'], weakness: 'ls' },
     { id: 'int-nz-4', name: 'Quinton du Plooy', age: 30, nationality: 'South Africa', role: 'BT', batting: 76, bowling: 0, style: 'D', isForeign: true, pos: 'OP', traits: ['Pace-Off Blindspot'] },
     { id: 'int-nz-5', name: 'Liam Hendricks', age: 28, nationality: 'South Africa', role: 'SB', batting: 15, bowling: 75, style: 'N', isForeign: true, traits: ['Volatile Wickets'], weakness: 'os' },
     { id: 'int-wi-1', name: 'Romario Beckles', age: 28, nationality: 'West Indies', role: 'BT', batting: 78, bowling: 0, style: 'A', isForeign: true, pos: 'Finisher', traits: ['Spin Slasher'] },
-    { id: 'int-wi-3', name: 'Romario Beckles', age: 28, nationality: 'West Indies', role: 'BT', batting: 78, bowling: 0, style: 'A', isForeign: true, pos: 'Finisher', traits: ['Spin Slasher'] },
     { id: 'int-sl-1', name: 'Dinesh Samarawickrama', age: 29, nationality: 'Sri Lanka', role: 'WK', batting: 70, bowling: 5, style: 'N', isForeign: true, traits: ['Middle-Order Engine'] },
     { id: 'int-sl-2', name: 'Hashan Ranatunga', age: 31, nationality: 'Sri Lanka', role: 'AR', batting: 68, bowling: 62, style: 'A', isForeign: true, traits: ['Pinch Hitter'] },
-    { id: 'int-sa-1', name: 'Quinton du Plooy', age: 30, nationality: 'South Africa', role: 'BT', batting: 76, bowling: 0, style: 'D', isForeign: true, pos: 'OP', traits: ['Pace-Off Blindspot'] },
     { id: 'int-en-1', name: 'Jonny Vance', age: 29, nationality: 'England', role: 'BT', batting: 78, bowling: 0, style: 'D', isForeign: true, traits: ['Anchor Lockdown'] },
-    { id: 'int-en-2', name: 'Jonny Vance', age: 29, nationality: 'England', role: 'BT', batting: 78, bowling: 0, style: 'D', isForeign: true, traits: ['Anchor Lockdown'] },
+    
+    // New International Players
+    { id: 'int-au-11', name: 'A. Haddin', age: 32, nationality: 'Australia', role: 'AR', batting: 65, bowling: 56, style: 'A', isForeign: true },
+    { id: 'int-au-12', name: 'Langer', age: 24, nationality: 'Australia', role: 'BL', batting: 22, bowling: 72, style: 'D', isForeign: true },
+    { id: 'int-au-13', name: 'Parsh', age: 26, nationality: 'Australia', role: 'WK', batting: 76, bowling: 0, style: 'N', isForeign: true, pos: 'OP' },
+    { id: 'int-au-14', name: 'Mausechate', age: 23, nationality: 'Australia', role: 'BT', batting: 69, bowling: 23, style: 'A', isForeign: true },
+    { id: 'int-au-15', name: 'Wade', age: 25, nationality: 'Australia', role: 'BL', batting: 25, bowling: 84, style: 'D', isForeign: true },
+    { id: 'int-au-16', name: 'Lance', age: 26, nationality: 'Australia', role: 'BT', batting: 76, bowling: 0, style: 'N', isForeign: true, pos: 'OP' },
+    { id: 'int-au-17', name: 'M.G. Glaxen', age: 28, nationality: 'Australia', role: 'AR', batting: 82, bowling: 65, style: 'A', isForeign: true, pos: 'OP' },
+    { id: 'int-au-18', name: 'J. Harris', age: 22, nationality: 'Australia', role: 'AR', batting: 56, bowling: 45, style: 'N', isForeign: true },
+    { id: 'int-au-19', name: 'Lin', age: 23, nationality: 'Australia', role: 'BL', batting: 34, bowling: 68, style: 'N', isForeign: true },
+    { id: 'int-au-20', name: 'Wilton', age: 27, nationality: 'Australia', role: 'AR', batting: 72, bowling: 64, style: 'N', isForeign: true },
+    
+    { id: 'int-nz-6', name: 'Waller', age: 24, nationality: 'New Zealand', role: 'BL', batting: 23, bowling: 67, style: 'N', isForeign: true },
+    { id: 'int-nz-7', name: 'B. Rington', age: 28, nationality: 'New Zealand', role: 'AR', batting: 45, bowling: 56, style: 'N', isForeign: true },
+    { id: 'int-nz-8', name: 'Addams', age: 25, nationality: 'New Zealand', role: 'AR', batting: 55, bowling: 45, style: 'N', isForeign: true },
+    { id: 'int-nz-9', name: 'S. Warner', age: 26, nationality: 'New Zealand', role: 'BT', batting: 76, bowling: 33, style: 'A', isForeign: true, pos: 'OP' },
+    { id: 'int-nz-10', name: 'Sprike', age: 22, nationality: 'New Zealand', role: 'WK', batting: 80, bowling: 0, style: 'A', isForeign: true, pos: 'OP' },
+    
+    { id: 'int-wi-4', name: 'Jordan', age: 24, nationality: 'West Indies', role: 'BL', batting: 23, bowling: 66, style: 'N', isForeign: true },
+    { id: 'int-wi-5', name: 'N. Fill', age: 27, nationality: 'West Indies', role: 'SB', batting: 22, bowling: 68, style: 'N', isForeign: true },
+    { id: 'int-wi-6', name: 'A. Chadwick', age: 23, nationality: 'West Indies', role: 'WK', batting: 73, bowling: 0, style: 'A', isForeign: true, pos: 'OP' },
+    
+    { id: 'int-sl-3', name: 'Sriwardna', age: 26, nationality: 'Sri Lanka', role: 'BT', batting: 67, bowling: 0, style: 'D', isForeign: true },
+    { id: 'int-sl-4', name: 'C. Dhanushka', age: 28, nationality: 'Sri Lanka', role: 'AR', batting: 45, bowling: 66, style: 'D', isForeign: true },
+    
+    { id: 'int-sa-2', name: 'James', age: 25, nationality: 'South Africa', role: 'AR', batting: 63, bowling: 66, style: 'A', isForeign: true },
+    { id: 'int-sa-3', name: 'Aram', age: 29, nationality: 'South Africa', role: 'AR', batting: 45, bowling: 66, style: 'D', isForeign: true },
+    
+    { id: 'int-en-3', name: 'N. Colin', age: 24, nationality: 'England', role: 'AR', batting: 70, bowling: 61, style: 'N', isForeign: true },
+    { id: 'int-en-4', name: 'D. Quentin', age: 22, nationality: 'England', role: 'BT', batting: 56, bowling: 23, style: 'N', isForeign: true },
 ];
 
 export const RAW_DATA_SPINNERS: RawPlayerData[] = [

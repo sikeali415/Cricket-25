@@ -168,12 +168,12 @@ export const useSimulation = (gameData: GameData, setGameData: React.Dispatch<Re
             wicketProbability *= formatMods.wicketChance;
             if (!format.includes('First-Class')) {
                 if (target) {
-                    if (score < 50) wicketProbability *= 0.05;
-                    else if (score < 120) wicketProbability *= 0.35;
+                    if (score < 50) wicketProbability *= 0.45;
+                    else if (score < 120) wicketProbability *= 0.75;
                 } else {
-                    if (score < 40) wicketProbability *= 0.1;
-                    else if (score < 80) wicketProbability *= 0.4;
-                    else if (balls < 60 && score < 100) wicketProbability *= 0.7;
+                    if (score < 40) wicketProbability *= 0.5;
+                    else if (score < 80) wicketProbability *= 0.8;
+                    else if (balls < 60 && score < 100) wicketProbability *= 0.9;
                 }
             }
             if (format.includes('First-Class')) wicketProbability *= 0.8;
@@ -282,7 +282,7 @@ export const useSimulation = (gameData: GameData, setGameData: React.Dispatch<Re
                     if (bowlingLineup[i].ballsBowled >= maxOversPerBowler * 6) continue;
                     const b = bowlingLineup[i]; let bScore = b.skill;
                     if (wickets < 5) { if (b.role === PlayerRole.FAST_BOWLER) bScore += 10; } else { if (b.role === PlayerRole.SPIN_BOWLER) bScore += 5; }
-                    bScore -= (b.ballsBowled / 6) * 2; bScore += Math.random() * 10;
+                    bScore -= (b.ballsBowled / 6) * 1.5; bScore += Math.random() * 8; // Slightly less penalty for bowling more to keep top bowlers longer but rotate better
                     if (bScore > bestScore) { bestScore = bScore; bestNextBowlerIndex = i; }
                 }
                 if (bestNextBowlerIndex !== -1) bowlerIndex = bestNextBowlerIndex;
@@ -520,14 +520,16 @@ export const useSimulation = (gameData: GameData, setGameData: React.Dispatch<Re
                         stats.thirties++;
                     }
 
-                    if (batPerf.runs >= 50 && batPerf.balls > 0) {
-                        if (stats.fastestFifty === 0 || batPerf.balls < stats.fastestFifty) {
-                            stats.fastestFifty = batPerf.balls;
+                    if (batPerf.runs >= 50 && (batPerf.ballsToFifty || batPerf.balls) > 0) {
+                        const bTo50 = batPerf.ballsToFifty || batPerf.balls;
+                        if (stats.fastestFifty === 0 || bTo50 < stats.fastestFifty) {
+                            stats.fastestFifty = bTo50;
                         }
                     }
-                    if (batPerf.runs >= 100 && batPerf.balls > 0) {
-                        if (stats.fastestHundred === 0 || batPerf.balls < stats.fastestHundred) {
-                            stats.fastestHundred = batPerf.balls;
+                    if (batPerf.runs >= 100 && (batPerf.ballsToHundred || batPerf.balls) > 0) {
+                        const bTo100 = batPerf.ballsToHundred || batPerf.balls;
+                        if (stats.fastestHundred === 0 || bTo100 < stats.fastestHundred) {
+                            stats.fastestHundred = bTo100;
                         }
                     }
 
@@ -535,6 +537,7 @@ export const useSimulation = (gameData: GameData, setGameData: React.Dispatch<Re
                     stats.sixes += batPerf.sixes; 
                     stats.average = stats.dismissals > 0 ? stats.runs / stats.dismissals : stats.runs; 
                     stats.strikeRate = stats.ballsFaced > 0 ? (stats.runs / stats.ballsFaced) * 100 : 0;
+
 
                     // Phase Stats
                     if (!stats.phaseStats) {

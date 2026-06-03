@@ -325,7 +325,7 @@ const PostTossInfoScreen = ({ state, gameData, onProceed }: { state: LiveMatchSt
                                                     </span>
                                                 </div>
                                                 <div className="text-right">
-                                                    <div className="text-teal-400 font-black text-xs">{(p.stats[gameData.currentFormat]?.runs || 0)}r</div>
+                                                    <div className="text-teal-400 font-black text-xs">{(p.seasonStats?.[gameData.currentSeason]?.[gameData.currentFormat]?.runs ?? p.stats[gameData.currentFormat]?.runs ?? 0)}r</div>
                                                     <div className="text-[8px] text-slate-600 uppercase font-bold">Vs {teamB.name.slice(0,3)}: {h2h.runs}r</div>
                                                 </div>
                                             </div>
@@ -349,7 +349,7 @@ const PostTossInfoScreen = ({ state, gameData, onProceed }: { state: LiveMatchSt
                                                     </span>
                                                 </div>
                                                 <div className="text-right">
-                                                    <div className="text-cyan-400 font-black text-xs">{(p.stats[gameData.currentFormat]?.wickets || 0)}w</div>
+                                                    <div className="text-cyan-400 font-black text-xs">{(p.seasonStats?.[gameData.currentSeason]?.[gameData.currentFormat]?.wickets ?? p.stats[gameData.currentFormat]?.wickets ?? 0)}w</div>
                                                     <div className="text-[8px] text-slate-600 uppercase font-bold">Vs {teamB.name.slice(0,3)}: {h2h.wickets}w</div>
                                                 </div>
                                             </div>
@@ -372,8 +372,8 @@ const PostTossInfoScreen = ({ state, gameData, onProceed }: { state: LiveMatchSt
                                                     <span className="text-[9px] text-slate-500">Season: {p.stats[gameData.currentFormat]?.runs || 0}r</span>
                                                 </div>
                                                 <div className="text-right">
-                                                    <div className="text-teal-400 font-black text-xs">{h2h.runs}</div>
-                                                    <div className="text-[8px] text-slate-600 uppercase font-bold">Vs {teamA.name.slice(0,3)}</div>
+                                                    <div className="text-teal-400 font-black text-xs">{(p.seasonStats?.[gameData.currentSeason]?.[gameData.currentFormat]?.runs ?? p.stats[gameData.currentFormat]?.runs ?? 0)}r</div>
+                                                    <div className="text-[8px] text-slate-600 uppercase font-bold">Vs {teamA.name.slice(0,3)}: {h2h.runs}r</div>
                                                 </div>
                                             </div>
                                         );
@@ -390,8 +390,8 @@ const PostTossInfoScreen = ({ state, gameData, onProceed }: { state: LiveMatchSt
                                                     <span className="text-[9px] text-slate-500">Season: {p.stats[gameData.currentFormat]?.wickets || 0}w</span>
                                                 </div>
                                                 <div className="text-right">
-                                                    <div className="text-cyan-400 font-black text-xs">{h2h.wickets}</div>
-                                                    <div className="text-[8px] text-slate-600 uppercase font-bold">Vs {teamA.name.slice(0,3)}</div>
+                                                    <div className="text-cyan-400 font-black text-xs">{(p.seasonStats?.[gameData.currentSeason]?.[gameData.currentFormat]?.wickets ?? p.stats[gameData.currentFormat]?.wickets ?? 0)}w</div>
+                                                    <div className="text-[8px] text-slate-600 uppercase font-bold">Vs {teamA.name.slice(0,3)}: {h2h.wickets}w</div>
                                                 </div>
                                             </div>
                                         );
@@ -494,11 +494,26 @@ const LiveMatchScreen: React.FC<LiveMatchScreenProps> = ({ match, gameData, onMa
     // In form players & players to watch
     const getInFormPlayers = useCallback((team: any) => {
         if (!team) return { batters: [], bowlers: [] };
+        const format = gameData.currentFormat;
+        const season = gameData.currentSeason;
+        
+        const getRuns = (p: any) => {
+            const ss = p.seasonStats?.[season]?.[format];
+            const cs = p.stats[format];
+            return ss ? ss.runs : (cs?.runs || 0);
+        };
+
+        const getWickets = (p: any) => {
+            const ss = p.seasonStats?.[season]?.[format];
+            const cs = p.stats[format];
+            return ss ? ss.wickets : (cs?.wickets || 0);
+        };
+
         const batters = [...team.squad]
             .filter(p => p.role === 'BT' || p.role === 'AR' || p.role === 'WK')
             .sort((a, b) => {
-                const runsA = a.stats[gameData.currentFormat]?.runs || 0;
-                const runsB = b.stats[gameData.currentFormat]?.runs || 0;
+                const runsA = getRuns(a);
+                const runsB = getRuns(b);
                 if (runsB !== runsA) return runsB - runsA;
                 return b.battingSkill - a.battingSkill;
             })
@@ -507,15 +522,15 @@ const LiveMatchScreen: React.FC<LiveMatchScreenProps> = ({ match, gameData, onMa
         const bowlers = [...team.squad]
             .filter(p => p.role === 'BL' || p.role === 'SB' || p.role === 'AR')
             .sort((a, b) => {
-                const wicketsA = a.stats[gameData.currentFormat]?.wickets || 0;
-                const wicketsB = b.stats[gameData.currentFormat]?.wickets || 0;
+                const wicketsA = getWickets(a);
+                const wicketsB = getWickets(b);
                 if (wicketsB !== wicketsA) return wicketsB - wicketsA;
                 return b.secondarySkill - a.secondarySkill;
             })
             .slice(0, 2);
 
         return { batters, bowlers };
-    }, [gameData.currentFormat]);
+    }, [gameData.currentFormat, gameData.currentSeason]);
 
     const getPlayerToWatch = useCallback((team: any) => {
         if (!team) return null;
@@ -803,14 +818,21 @@ const LiveMatchScreen: React.FC<LiveMatchScreenProps> = ({ match, gameData, onMa
 
                     {/* 2x3 Stat Grid */}
                     <div className="grid grid-cols-3 border border-slate-700 rounded-xl overflow-hidden divide-x divide-y divide-slate-700">
-                        {[
+                        {(type === 'bowling' ? [
+                            { label: 'Matches', val: stats.matches + 1 },
+                            { label: 'Total Wkts', val: livingWickets },
+                            { label: 'Economy', val: livingEconomy.toFixed(2) },
+                            { label: 'Bow Average', val: (livingWickets > 0 ? (livingRunsConceded / livingWickets).toFixed(2) : livingRunsConceded.toFixed(2)) },
+                            { label: '3w / 5w', val: `${stats.threeWicketHauls + (currentBowlPerf?.wickets >= 3 && currentBowlPerf?.wickets < 5 ? 1 : 0)}/${livingFiveWickets}` },
+                            { label: 'Best Bowl', val: stats.bestBowling }
+                        ] : [
                             { label: 'Matches', val: stats.matches + 1 },
                             { label: 'Total Runs', val: livingRuns },
                             { label: 'Strike Rate', val: livingStrikeRate.toFixed(1) },
                             { label: 'Average', val: livingAvg.toFixed(1) },
                             { label: '50s / 100s', val: `${livingFifties}/${livingHundreds}` },
                             { label: 'High Score', val: livingHighest }
-                        ].map((s, i) => (
+                        ]).map((s, i) => (
                             <div key={i} className="bg-slate-800/30 p-2 sm:p-3">
                                 <p className="text-[9px] text-slate-500 uppercase font-bold tracking-tight mb-0.5">{s.label}</p>
                                 <p className="text-white font-bold text-sm sm:text-base font-mono">{s.val}</p>

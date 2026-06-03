@@ -34,7 +34,11 @@ fun AuctionScreen(
     onAuctionComplete: (List<Team>) -> Unit
 ) {
     var teams by remember { mutableStateOf(gameData.teams) }
-    val playersPool = remember { gameData.allPlayers.shuffled() }
+    // Fix: Filter out players already in squads (retained)
+    val playersPool = remember { 
+        val retainedIds = teams.flatMap { it.squad.map { p -> p.id } }.toSet()
+        gameData.allPlayers.filter { it.id !in retainedIds }.shuffled() 
+    }
     
     var currentPlayerIdx by remember { mutableIntStateOf(0) }
     var currentBid by remember { mutableDoubleStateOf(0.0) }
@@ -44,6 +48,7 @@ fun AuctionScreen(
     var countdown by remember { mutableIntStateOf(3) }
     var biddingLog by remember { mutableStateOf(listOf("Welcome to the 2026 Draft Room.")) }
     var auctionFinished by remember { mutableStateOf(false) }
+    var isAutoMode by remember { mutableStateOf(false) }
 
     val currentPlayer = playersPool.getOrNull(currentPlayerIdx)
     val userTeam = teams.find { it.id == gameData.userTeamId }
@@ -111,10 +116,10 @@ fun AuctionScreen(
     }
 
     // Logic Loop
-    LaunchedEffect(isAuctioning, currentBid, highestBidderId, countdown) {
+    LaunchedEffect(isAuctioning, currentBid, highestBidderId, countdown, isAutoMode) {
         if (!isAuctioning || currentPlayer == null || auctionFinished) return@LaunchedEffect
 
-        delay(1500 + Random.nextLong(1000))
+        delay(if (isAutoMode) 400L else 1500 + Random.nextLong(1000))
         
         val increment = getBidIncrement(currentBid)
         val nextBid = currentBid + increment
@@ -126,7 +131,8 @@ fun AuctionScreen(
         }
         
         val biddingTeam = eligibleTeams.find { t ->
-            if (t.id == gameData.userTeamId) false
+            if (isAutoMode && t.id == gameData.userTeamId) false // User doesn't bid in Auto Mode
+            else if (!isAutoMode && t.id == gameData.userTeamId) false
             else nextBid <= getPlayerValuation(currentPlayer, t)
         }
         
@@ -160,6 +166,34 @@ fun AuctionScreen(
                 isAuctioning = true
             }
         }
+    }
+
+    fun autoFillRemaining() {
+        val MIN_SIZE = 14
+        val MAX_SIZE = 18
+        val usedPlayerIds = teams.flatMap { it.squad.map { p -> p.id } }.toMutableSet()
+        val availablePool = playersPool.filter { it.id !in usedPlayerIds }.toMutableList()
+        
+        var updatedTeams = teams.map { team ->
+            var squad = team.squad.toMutableList()
+            var purse = team.purse
+            
+            while (squad.size < MIN_SIZE && availablePool.isNotEmpty()) {
+                val p = availablePool.removeAt(0)
+                // Basic auto-price logic
+                val price = p.basePrice + (Random.nextDouble() * 2.0)
+                val finalPrice = if (purse >= price) price else p.basePrice
+                
+                squad.add(p.copy(
+                    boughtFor = finalPrice,
+                    marketValue = finalPrice * 1.1,
+                    teamName = team.name
+                ))
+                purse -= finalPrice
+            }
+            team.copy(squad = squad, purse = maxOf(0.0, purse))
+        }
+        onAuctionComplete(updatedTeams)
     }
 
     Scaffold(
@@ -223,8 +257,13 @@ fun AuctionScreen(
                             color = Color.Gray,
                             fontWeight = FontWeight.Bold
                         )
-                        TextButton(onClick = { onAuctionComplete(teams) }) {
-                            Text("FAST AUTO-FILL", color = Color.Red, style = MaterialTheme.typography.labelSmall)
+                        Row {
+                            TextButton(onClick = { isAutoMode = !isAutoMode }) {
+                                Text(if (isAutoMode) "STOP AUTO" else "AUTO WATCH", color = Teal500, style = MaterialTheme.typography.labelSmall)
+                            }
+                            TextButton(onClick = { autoFillRemaining() }) {
+                                Text("FAST AUTO-FILL", color = Color.Red, style = MaterialTheme.typography.labelSmall)
+                            }
                         }
                     }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -383,7 +422,7 @@ fun AuctionScreen(
                             
                             Spacer(modifier = Modifier.height(24.dp))
                             val nextBid = currentBid + getBidIncrement(currentBid)
-                            val canBid = highestBidderId != gameData.userTeamId && (userTeam?.purse ?: 0.0) >= nextBid
+                            val canBid = !isAutoMode && highestBidderId != gameData.userTeamId && (userTeam?.purse ?: 0.0) >= nextBid
                             
                             Button(
                                 onClick = {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Player, Team, GameData, PlayerRole, AppState } from '../types';
-import { getRoleColor, getRoleFullName } from '../utils';
+import { getRoleColor, getRoleFullName, getPlayerBasePrice } from '../utils';
 import { Icons } from './Icons';
 
 interface AuctionRoomProps {
@@ -30,6 +30,7 @@ const AuctionRoom: React.FC<AuctionRoomProps> = ({ gameData, onAuctionComplete }
 
     const [activeOverlay, setActiveOverlay] = useState<'none' | 'franchises' | 'pool'>('none');
     const [isBiddingWar, setIsBiddingWar] = useState(false);
+    const [isAutoMode, setIsAutoMode] = useState(false);
 
     // Filter out retained players and stabilize the pool
     const [initialSortedPool] = useState(() => {
@@ -64,7 +65,7 @@ const AuctionRoom: React.FC<AuctionRoomProps> = ({ gameData, onAuctionComplete }
     };
 
     const canBid = useMemo(() => {
-        if (!userTeam || !isAuctioning || !currentPlayer) return false;
+        if (!userTeam || !isAuctioning || !currentPlayer || isAutoMode) return false;
         if (highestBidderId === userTeam.id) return false;
         if (userTeam.squad.length >= MAX_SQUAD_SIZE) return false;
         if (currentPlayer.isForeign && userTeam.squad.filter(p => p.isForeign).length >= MAX_FOREIGN_LIMIT) return false;
@@ -233,7 +234,11 @@ const AuctionRoom: React.FC<AuctionRoomProps> = ({ gameData, onAuctionComplete }
             );
 
             if (eligibleTeams.length > 0) {
+                // In Auto mode, user team is also handled by AI logic (but usually they won't bid if we want user to just watch)
+                // Actually, if it's "Auto", let's allow AI to bid for user too or just let AI teams battle.
+                // User said "I can't bid", so user team will not bid in Auto mode.
                 const biddingTeam = eligibleTeams.find(t => {
+                    if (t.id === gameData.userTeamId && isAutoMode) return false; 
                     if (t.id === gameData.userTeamId) return false;
                     const valuation = getPlayerValuation(currentPlayer, t);
                     return (currentBid + increment) <= valuation;
@@ -264,10 +269,10 @@ const AuctionRoom: React.FC<AuctionRoomProps> = ({ gameData, onAuctionComplete }
                     else unsoldPlayer();
                 }
             }
-        }, 1000 + Math.random() * 1000);
+        }, isAutoMode ? 400 : 1000 + Math.random() * 1000);
 
         return () => clearTimeout(timer);
-    }, [isAuctioning, currentBid, highestBidderId, currentPlayer, countdown, teams]);
+    }, [isAuctioning, currentBid, highestBidderId, currentPlayer, countdown, teams, isAutoMode]);
 
     const sellPlayer = () => {
         setIsAuctioning(false);
@@ -482,7 +487,15 @@ const AuctionRoom: React.FC<AuctionRoomProps> = ({ gameData, onAuctionComplete }
             <div className="p-4 bg-slate-900/80 backdrop-blur-md border-t border-white/5 h-40">
                 <div className="text-[10px] font-black uppercase text-slate-600 mb-2 flex justify-between">
                     <span>Live Activity Feed</span>
-                    <button onClick={autoAuctionRemaining} className="text-rose-400 hover:text-rose-300">Fast Auto-Fill</button>
+                    <div className="flex gap-4">
+                        <button 
+                            onClick={() => setIsAutoMode(!isAutoMode)} 
+                            className={`${isAutoMode ? 'text-teal-400' : 'text-slate-400'} hover:text-teal-300 font-bold uppercase transition-colors`}
+                        >
+                            {isAutoMode ? 'Stop Auto-Watch' : 'Start Auto-Watch'}
+                        </button>
+                        <button onClick={autoAuctionRemaining} className="text-rose-400 hover:text-rose-300">Fast Auto-Fill</button>
+                    </div>
                 </div>
                 <div className="space-y-1 overflow-y-auto h-24 font-mono text-[10px] scrollbar-hide">
                     {biddingLog.map((log, i) => (

@@ -98,73 +98,15 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
             const finalPlayingXIs = { ...prev.playingXIs };
             
             const updatedTeams = prev.teams.map(t => {
-                const squad = [...t.squad].filter(p => !p.injury);
-                // If squad is too small, use full squad anyway (fallback)
-                const activeSquad = squad.length >= 11 ? squad : t.squad;
-
-                const xi: Player[] = [];
-                const selectedIds = new Set<string>();
-                const maxForeignAllowed = prev.currentFormat === Format.T20 ? 3 : 0;
-                let foreignInXI = 0;
-
-                const addPlayer = (p: Player) => {
-                    if (selectedIds.has(p.id)) return false;
-                    if (p.isForeign && foreignInXI >= maxForeignAllowed) return false;
-                    
-                    xi.push(p);
-                    selectedIds.add(p.id);
-                    if (p.isForeign) foreignInXI++;
-                    return true;
-                };
-
-                // 1. Mandatory Minimums
-                const wk = activeSquad.filter(p => p.role === PlayerRole.WICKET_KEEPER).sort((a,b) => b.battingSkill - a.battingSkill)[0];
-                if (wk) addPlayer(wk);
-
-                const batters = activeSquad.filter(p => p.role === PlayerRole.BATSMAN).sort((a,b) => b.battingSkill - a.battingSkill);
-                batters.slice(0, 4).forEach(p => addPlayer(p));
-
-                const ar = activeSquad.filter(p => p.role === PlayerRole.ALL_ROUNDER).sort((a,b) => (b.battingSkill + b.secondarySkill) - (a.battingSkill + a.secondarySkill))[0];
-                if (ar) addPlayer(ar);
-
-                const bowlers = activeSquad.filter(p => p.role === PlayerRole.FAST_BOWLER || p.role === PlayerRole.SPIN_BOWLER).sort((a,b) => b.secondarySkill - a.secondarySkill);
-                bowlers.slice(0, 3).forEach(p => addPlayer(p));
-
-                // 2. Fill to 11 ensuring Max 5 Bowlers
-                const others = activeSquad.filter(p => !selectedIds.has(p.id))
-                    .sort((a,b) => (Math.max(b.battingSkill, b.secondarySkill)) - (Math.max(a.battingSkill, a.secondarySkill)));
-
-                for (const p of others) {
-                    if (xi.length >= 11) break;
-                    const currentBowlers = xi.filter(px => px.role === PlayerRole.FAST_BOWLER || px.role === PlayerRole.SPIN_BOWLER).length;
-                    const isProperBowler = p.role === PlayerRole.FAST_BOWLER || p.role === PlayerRole.SPIN_BOWLER;
-                    if (isProperBowler && currentBowlers >= 5) continue;
-                    addPlayer(p);
-                }
-
-                // Emergency fill
-                if (xi.length < 11) {
-                    const emergency = activeSquad.filter(p => !selectedIds.has(p.id)).sort((a,b) => (b.battingSkill + b.secondarySkill) - (a.battingSkill + a.secondarySkill));
-                    emergency.forEach(p => { if (xi.length < 11) addPlayer(p); });
-                }
-
-                // 3. Official Ordering (1-11)
-                // Group A: Best performers for top order (highest battingSkill)
-                // Group B: Proper Bowlers for 8-11
-                const finalXIPlayers = xi.slice(0, 11);
-                const properBowlers = finalXIPlayers.filter(p => p.role === PlayerRole.FAST_BOWLER || p.role === PlayerRole.SPIN_BOWLER).sort((a,b) => a.secondarySkill - b.secondarySkill); // weakest bowlers first in this subset? No, usually 8-11 are best bowlers.
+                const optimizedXI = generateAutoXI(t.squad, format);
+                const xiIds = optimizedXI.map(p => p.id);
                 
-                // Let's just pick top 7 batters and 4 bowlers
-                const sortedByBat = [...finalXIPlayers].sort((a,b) => b.battingSkill - a.battingSkill);
-                const top7 = sortedByBat.slice(0, 7);
-                const tail = finalXIPlayers.filter(p => !top7.find(t7 => t7.id === p.id)).sort((a,b) => b.secondarySkill - a.secondarySkill);
+                finalPlayingXIs[t.id] = { ...finalPlayingXIs[t.id], [format]: xiIds };
 
-                const newXIIds = [...top7, ...tail].map(p => p.id);
-                finalPlayingXIs[t.id] = { ...finalPlayingXIs[t.id], [format]: newXIIds };
-
-                let cid = t.captainId;
-                if (!cid || !newXIIds.includes(cid)) {
-                    cid = finalXIPlayers.sort((a,b) => (b.battingSkill + b.secondarySkill) - (a.battingSkill + a.secondarySkill))[0]?.id || null;
+                let cid = t.captains?.[format] || t.captainId; // Try to preserve existing captain
+                if (!cid || !xiIds.includes(cid)) {
+                    // Pick new captain if needed
+                    cid = [...optimizedXI].sort((a,b) => (b.battingSkill + b.secondarySkill) - (a.battingSkill + a.secondarySkill))[0]?.id || null;
                 }
 
                 return { ...t, captainId: cid };
@@ -172,7 +114,7 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
 
             return { ...prev, teams: updatedTeams, playingXIs: finalPlayingXIs };
         });
-        showFeedback("Squads Optimized: Balanced Playing XI enforced (4 BT, 1 WK, 1 AR, 3-5 BL).", "success");
+        showFeedback("Squads Optimized: Strategic 1-11 balancing applied.", "success");
     };
 
     useEffect(() => {
@@ -672,7 +614,7 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
             case 'DASHBOARD': return <Dashboard {...commonProps} handlePlayMatch={handlePlayMatch} handleForwardDay={handleForwardDay} />;
             case 'LEAGUES': return <Standings gameData={gameData} />; 
             case 'SCHEDULE': return <Schedule gameData={gameData} userTeam={userTeam} viewMatchResult={result => { setSelectedMatchResult(result); setScreen('MATCH_RESULT'); }} />;
-            case 'LINEUPS': return <Lineups {...commonProps} handleUpdatePlayingXI={handleUpdatePlayingXI} handleUpdateCaptain={handleUpdateCaptain} />;
+            case 'LINEUPS': return <Lineups {...commonProps} handleUpdatePlayingXI={handleUpdatePlayingXI} handleUpdateCaptain={handleUpdateCaptain} viewPlayerProfile={(p) => { setSelectedPlayer(p); setScreen('PLAYER_PROFILE'); }} />;
             case 'EDITOR': return <Editor {...commonProps} handleUpdatePlayer={handleUpdatePlayer} handleCreatePlayer={handleCreatePlayer} handleUpdateGround={handleUpdateGround} handleUpdateScoreLimits={handleUpdateScoreLimits} />;
             case 'PLAYER_DATABASE': return <PlayerDatabase gameData={gameData} onAddPlayer={() => setScreen('EDITOR')} onViewPlayer={(p) => { setSelectedPlayer(p); setScreen('PLAYER_PROFILE'); }} />;
             case 'NEWS': return <News news={gameData.news} />;

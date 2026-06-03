@@ -184,16 +184,19 @@ const AuctionRoom: React.FC<AuctionRoomProps> = ({ gameData, onAuctionComplete }
             });
         }
 
-        // Fill remaining players for ALL teams to reach minimum squad size (14 for now)
-        const MIN_SIZE = 14;
+        // Fill remaining players for ALL teams to reach FULL squad size (18)
+        const MIN_SIZE = 18;
         let usedPlayerIds = new Set(workingTeams.flatMap(t => t.squad.map(p => p.id)));
         
+        // Deduplicate pool before processing to ensure no foreign duplicates
+        const uniquePool = initialSortedPool.filter(p => !usedPlayerIds.has(p.id));
+
         const finalTeams = workingTeams.map(team => {
             const squad = [...team.squad];
             let purse = team.purse;
             
-            // Re-filter available pool for each team starting from remaining players
-            const getAvailableForTeam = () => initialSortedPool.filter(p => 
+            // Priority: Get 1 keeper, 5 bowlers, 5 batters
+            const getAvailableForTeam = () => uniquePool.filter(p => 
                 !usedPlayerIds.has(p.id) && 
                 (!p.isForeign || squad.filter(px => px.isForeign).length < MAX_FOREIGN_LIMIT)
             );
@@ -202,6 +205,7 @@ const AuctionRoom: React.FC<AuctionRoomProps> = ({ gameData, onAuctionComplete }
                 const teamPool = getAvailableForTeam();
                 if (teamPool.length === 0) break;
                 
+                // Simplified draft distribution
                 const p = teamPool[0];
                 const bp = (p.basePrice || getPlayerBasePrice(p) || 0.25);
                 const price = calculateAutoAuctionPrice(bp);
@@ -212,7 +216,7 @@ const AuctionRoom: React.FC<AuctionRoomProps> = ({ gameData, onAuctionComplete }
                 usedPlayerIds.add(p.id);
                 purse = Number((purse - finalPrice).toFixed(2));
             }
-            return { ...team, squad, purse: Math.max(0, purse) };
+            return { ...team, squad, purse: Math.max(0.1, purse) };
         });
 
         setTeams(finalTeams);
@@ -234,11 +238,14 @@ const AuctionRoom: React.FC<AuctionRoomProps> = ({ gameData, onAuctionComplete }
             );
 
             if (eligibleTeams.length > 0) {
-                // In Auto mode, user team is also handled by AI logic (but usually they won't bid if we want user to just watch)
-                // Actually, if it's "Auto", let's allow AI to bid for user too or just let AI teams battle.
-                // User said "I can't bid", so user team will not bid in Auto mode.
+                // In Auto mode, user team is also handled by AI logic
                 const biddingTeam = eligibleTeams.find(t => {
-                    if (t.id === gameData.userTeamId && isAutoMode) return false; 
+                    // Logic to make it faster in Auto Mode
+                    if (isAutoMode) {
+                         // Higher randomness to speed up distribution in live auto mode
+                         const valuation = getPlayerValuation(currentPlayer, t) * (1.1 + Math.random() * 0.4);
+                         return (currentBid + increment) <= valuation;
+                    }
                     if (t.id === gameData.userTeamId) return false;
                     const valuation = getPlayerValuation(currentPlayer, t);
                     return (currentBid + increment) <= valuation;
@@ -263,13 +270,13 @@ const AuctionRoom: React.FC<AuctionRoomProps> = ({ gameData, onAuctionComplete }
                 }
             } else {
                 if (countdown > 1) {
-                    setCountdown(prev => prev - 1);
+                    setCountdown(prev => prev - (isAutoMode ? 2 : 1)); // Faster countdown in auto
                 } else {
                     if (highestBidderId) sellPlayer();
                     else unsoldPlayer();
                 }
             }
-        }, isAutoMode ? 400 : 1000 + Math.random() * 1000);
+        }, isAutoMode ? 200 : 1000 + Math.random() * 1000);
 
         return () => clearTimeout(timer);
     }, [isAuctioning, currentBid, highestBidderId, currentPlayer, countdown, teams, isAutoMode]);

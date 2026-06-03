@@ -365,11 +365,17 @@ const PostTossInfoScreen = ({ state, gameData, onProceed }: { state: LiveMatchSt
                                     <p className="text-[9px] text-slate-500 uppercase font-black mb-2 tracking-widest">In-Form Batters</p>
                                     {inFormB.batters.map(p => {
                                         const h2h = gameData.records.playerVsTeam?.find(r => r.playerId === p.id && r.vsTeamId === teamA.id) || { runs: 0 };
+                                        const careerStats = p.stats[gameData.currentFormat];
                                         return (
                                             <div key={p.id} className="flex justify-between items-center mb-2 pb-1 border-b border-slate-700/30">
                                                 <div className="flex flex-col">
-                                                    <span className="text-sm font-bold text-white">{p.name}</span>
-                                                    <span className="text-[9px] text-slate-500">Season: {p.stats[gameData.currentFormat]?.runs || 0}r</span>
+                                                    <div className="flex items-center gap-1">
+                                                        <span className="text-sm font-bold text-white">{p.name}</span>
+                                                        <span className="text-[8px] bg-slate-700 text-slate-400 px-1 rounded uppercase">{p.role}</span>
+                                                    </div>
+                                                    <span className="text-[9px] text-slate-500">
+                                                        {careerStats?.matches > 0 ? `Career: ${careerStats.runs}r (${careerStats.average.toFixed(1)})` : 'Debut Season'}
+                                                    </span>
                                                 </div>
                                                 <div className="text-right">
                                                     <div className="text-teal-400 font-black text-xs">{(p.seasonStats?.[gameData.currentSeason]?.[gameData.currentFormat]?.runs ?? p.stats[gameData.currentFormat]?.runs ?? 0)}r</div>
@@ -383,11 +389,17 @@ const PostTossInfoScreen = ({ state, gameData, onProceed }: { state: LiveMatchSt
                                     <p className="text-[9px] text-slate-500 uppercase font-black mb-2 tracking-widest">In-Form Bowlers</p>
                                     {inFormB.bowlers.map(p => {
                                         const h2h = gameData.records.playerVsTeam?.find(r => r.playerId === p.id && r.vsTeamId === teamA.id) || { wickets: 0 };
+                                        const careerStats = p.stats[gameData.currentFormat];
                                         return (
                                             <div key={p.id} className="flex justify-between items-center mb-2 pb-1 border-b border-slate-700/30">
                                                 <div className="flex flex-col">
-                                                    <span className="text-sm font-bold text-white">{p.name}</span>
-                                                    <span className="text-[9px] text-slate-500">Season: {p.stats[gameData.currentFormat]?.wickets || 0}w</span>
+                                                    <div className="flex items-center gap-1">
+                                                        <span className="text-sm font-bold text-white">{p.name}</span>
+                                                        <span className="text-[8px] bg-slate-700 text-slate-400 px-1 rounded uppercase">{p.role}</span>
+                                                    </div>
+                                                    <span className="text-[9px] text-slate-500">
+                                                        {careerStats?.matches > 0 ? `Career: ${careerStats.wickets}w (${careerStats.economy.toFixed(1)}e)` : 'Debut Season'}
+                                                    </span>
                                                 </div>
                                                 <div className="text-right">
                                                     <div className="text-cyan-400 font-black text-xs">{(p.seasonStats?.[gameData.currentSeason]?.[gameData.currentFormat]?.wickets ?? p.stats[gameData.currentFormat]?.wickets ?? 0)}w</div>
@@ -748,8 +760,10 @@ const LiveMatchScreen: React.FC<LiveMatchScreenProps> = ({ match, gameData, onMa
 
         const currentFormat = gameData.currentFormat;
         const stats = p.stats[currentFormat];
-        const currentBatPerf = striker?.playerId === p.id ? striker : nonStriker?.playerId === p.id ? nonStriker : null;
-        const currentBowlPerf = bowler?.playerId === p.id ? bowler : null;
+        
+        // Fix: Look up performance from entire lineup, not just currently active players
+        const currentBatPerf = currentInning.batting.find(b => b.playerId === p.id);
+        const currentBowlPerf = currentInning.bowling.find(b => b.playerId === p.id);
 
         // Calculate "Living Stats" (Career + current match contribution)
         const livingRuns = stats.runs + (currentBatPerf?.runs || 0);

@@ -141,6 +141,24 @@ export const generateAutoXI = (squad: Player[], format: Format) => {
         return true;
     };
 
+    // Helper: Calculate suitability score for a slot (1-11)
+    const getSuitabilityForSlot = (p: Player, slot: number) => {
+        let score = 0;
+        if (p.preferredPositions?.includes(slot)) {
+            score += 40; // Massive boost for preferred position
+        }
+        
+        // Role based suitability
+        if (slot <= 7) {
+            score += p.battingSkill;
+            if (p.role === PlayerRole.BATSMAN || p.role === PlayerRole.WICKET_KEEPER) score += 10;
+        } else {
+            score += p.secondarySkill;
+            if (p.role === PlayerRole.FAST_BOWLER || p.role === PlayerRole.SPIN_BOWLER) score += 10;
+        }
+        return score;
+    };
+
     // 1. Minimum 1 Wicket Keeper
     const keepers = activeSquad.filter(p => p.role === PlayerRole.WICKET_KEEPER).sort((a,b) => b.battingSkill - a.battingSkill);
     if (keepers.length > 0) addPlayer(keepers[0]);
@@ -190,7 +208,53 @@ export const generateAutoXI = (squad: Player[], format: Format) => {
         emergencyPool.forEach(p => { if (xi.length < 11) addPlayer(p); });
     }
 
-    return xi.slice(0, 11);
+    // 5. Official Ordering (1-11)
+    const finalXIPlayers = xi.slice(0, 11);
+    
+    // Sort players into available slots based on preferredPositions
+    const resultXI: (Player | null)[] = Array(11).fill(null);
+    const unassigned = [...finalXIPlayers];
+
+    // First pass: Assign players to their ONLY preferred slot if available
+    for (let slot = 1; slot <= 11; slot++) {
+        const strictMatch = unassigned.find(p => p.preferredPositions?.length === 1 && p.preferredPositions[0] === slot);
+        if (strictMatch) {
+            resultXI[slot - 1] = strictMatch;
+            unassigned.splice(unassigned.indexOf(strictMatch), 1);
+        }
+    }
+
+    // Second pass: Assign players to any of their preferred slots
+    for (let slot = 1; slot <= 11; slot++) {
+        if (resultXI[slot - 1]) continue;
+        const match = unassigned.find(p => p.preferredPositions?.includes(slot));
+        if (match) {
+            resultXI[slot - 1] = match;
+            unassigned.splice(unassigned.indexOf(match), 1);
+        }
+    }
+
+    // Third pass: Fill remaining slots with traditional logic
+    // Bottom 4 slots (8-11) prioritized for Bowlers/ARs
+    for (let slot = 11; slot >= 8; slot--) {
+        if (resultXI[slot - 1]) continue;
+        const bowlerOrAR = unassigned.find(p => p.role === PlayerRole.FAST_BOWLER || p.role === PlayerRole.SPIN_BOWLER || p.role === PlayerRole.ALL_ROUNDER);
+        if (bowlerOrAR) {
+            resultXI[slot - 1] = bowlerOrAR;
+            unassigned.splice(unassigned.indexOf(bowlerOrAR), 1);
+        }
+    }
+
+    // Finally fill whatever is left from top down
+    for (let slot = 1; slot <= 11; slot++) {
+        if (!resultXI[slot - 1] && unassigned.length > 0) {
+            // Pick best suited from unassigned
+            unassigned.sort((a, b) => getSuitabilityForSlot(b, slot) - getSuitabilityForSlot(a, slot));
+            resultXI[slot - 1] = unassigned.shift()!;
+        }
+    }
+
+    return resultXI.filter(Boolean) as Player[];
 };
 
 export const getBatterTier = (battingSkill: number) => {

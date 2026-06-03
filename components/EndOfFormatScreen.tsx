@@ -85,6 +85,11 @@ const EndOfFormatScreen: React.FC<EndOfFormatScreenProps> = ({ gameData, handleF
         return cost;
     }, [directSignedForeign, directSignedLocal]);
 
+    const isMajorYear = gameData.currentSeason % 10 === 0 && gameData.currentSeason !== 0;
+    const maxRetainTotal = isMajorYear ? 4 : 10;
+    const maxForeignRetain = isMajorYear ? 1 : 3;
+    const maxLocalRetain = maxRetainTotal - maxForeignRetain;
+
     const toggleRetention = (id: string) => {
         const player = userTeam?.squad.find(p => p.id === id);
         if (!player) return;
@@ -95,11 +100,17 @@ const EndOfFormatScreen: React.FC<EndOfFormatScreenProps> = ({ gameData, handleF
             if (next.has(id)) {
                 next.delete(id);
             } else {
+                if (next.size >= maxRetainTotal) {
+                    setErrorMessage(`Max total ${maxRetainTotal} retentions allowed in Season ${gameData.currentSeason}!`);
+                    return prev;
+                }
+
                 const alreadySelected = userTeam?.squad.filter(p => next.has(p.id)) || [];
                 const nextCost = alreadySelected.reduce((sum, p) => sum + getPlayerMarketPrice(p), 0) + getPlayerMarketPrice(player);
+                const budgetLimit = isMajorYear ? 30.0 : 60.0;
                 
-                if (nextCost > 30.0) {
-                    setErrorMessage("Pre-season retention budget would exceed 30.0 Crore limit!");
+                if (nextCost > budgetLimit) {
+                    setErrorMessage(`Pre-season retention budget would exceed ${budgetLimit}.0 Crore limit!`);
                     return prev;
                 }
 
@@ -107,16 +118,16 @@ const EndOfFormatScreen: React.FC<EndOfFormatScreenProps> = ({ gameData, handleF
                 const intCount = alreadySelected.filter(p => p.isForeign).length;
 
                 if (player.isForeign) {
-                    if (intCount < 1) {
+                    if (intCount < maxForeignRetain) {
                         next.add(id);
                     } else {
-                        setErrorMessage("Max 1 foreign/international retention allowed!");
+                        setErrorMessage(`Max ${maxForeignRetain} foreign retention(s) allowed!`);
                     }
                 } else {
-                    if (natCount < 3) {
+                    if (natCount < maxLocalRetain) {
                         next.add(id);
                     } else {
-                        setErrorMessage("Max 3 national/local retentions allowed!");
+                        setErrorMessage(`Max ${maxLocalRetain} local retention(s) allowed!`);
                     }
                 }
             }
@@ -125,8 +136,9 @@ const EndOfFormatScreen: React.FC<EndOfFormatScreenProps> = ({ gameData, handleF
     };
 
     const finalizeSeason = () => {
-        if (totalRetentionCost > 30.0) {
-            setErrorMessage("Standard core retention cost exceeds the 30 Crores preseason retention budget limit!");
+        const budgetLimit = isMajorYear ? 30.0 : 60.0;
+        if (totalRetentionCost > budgetLimit) {
+            setErrorMessage(`Standard core retention cost exceeds the ${budgetLimit} Crores preseason retention budget limit!`);
             return;
         }
 
@@ -153,7 +165,7 @@ const EndOfFormatScreen: React.FC<EndOfFormatScreenProps> = ({ gameData, handleF
                         onClick={() => { setRetentionTab('retain'); setErrorMessage(null); }}
                         className={`flex-1 py-3 text-xs uppercase font-black tracking-widest border-b-2 text-center transition-all ${retentionTab === 'retain' ? 'border-teal-500 text-teal-400 bg-teal-500/5' : 'border-transparent text-slate-500 hover:text-slate-300'}`}
                     >
-                        Core Retentions ({retainedIds.size}/4)
+                        Core Retentions ({retainedIds.size}/{maxRetainTotal})
                     </button>
                     <button 
                         onClick={() => { setRetentionTab('directSign'); setErrorMessage(null); }}
@@ -286,8 +298,8 @@ const EndOfFormatScreen: React.FC<EndOfFormatScreenProps> = ({ gameData, handleF
                 <div className="grid grid-cols-3 gap-2 mb-4">
                     <div className="bg-slate-900/80 p-3 rounded-2xl border border-slate-800 text-center">
                         <span className="text-[9px] font-black uppercase text-slate-500 block leading-none mb-1">Retention Purse</span>
-                        <span className={`text-sm font-black italic tracking-tight ${totalRetentionCost > 30.0 ? 'text-red-400' : 'text-teal-400'}`}>
-                            {totalRetentionCost.toFixed(1)} <span className="text-[10px] font-normal text-slate-500">/ 30m</span>
+                        <span className={`text-sm font-black italic tracking-tight ${totalRetentionCost > (isMajorYear ? 30.0 : 60.0) ? 'text-red-400' : 'text-teal-400'}`}>
+                            {totalRetentionCost.toFixed(1)} <span className="text-[10px] font-normal text-slate-500">/ {isMajorYear ? '30' : '60'}</span>
                         </span>
                     </div>
                     <div className="bg-slate-900/80 p-3 rounded-2xl border border-slate-800 text-center">
@@ -306,7 +318,7 @@ const EndOfFormatScreen: React.FC<EndOfFormatScreenProps> = ({ gameData, handleF
 
                 <button 
                     onClick={finalizeSeason}
-                    disabled={totalRetentionCost > 30.0}
+                    disabled={totalRetentionCost > (isMajorYear ? 30.0 : 60.0)}
                     className="w-full bg-teal-500 py-5 rounded-3xl text-lg font-black italic uppercase tracking-tighter shadow-2xl hover:bg-teal-400 transition-all active:scale-95 disabled:opacity-30 disabled:pointer-events-none text-slate-950"
                 >
                     Finalize & Start {gameData.currentFormat === Format.SHIELD ? 'Season Draft' : 'Auction Draft'}

@@ -79,6 +79,7 @@ export interface Player {
     isFinisher?: boolean;
     isPowerHitter?: boolean;
     traits?: string[];
+    preferredPositions?: number[];
 }
 
 export interface Team {

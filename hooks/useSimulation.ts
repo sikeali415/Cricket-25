@@ -226,8 +226,10 @@ export const useSimulation = (gameData: GameData, setGameData: React.Dispatch<Re
                 }
                 const skillDiff = (onStrikeBatterDetails.battingSkill * batterFatigue - bowlerDetails.secondarySkill * bowlerFatigue) / 100;
                 p_dot -= skillDiff * 0.1; p_4 += skillDiff * 0.05; p_6 += skillDiff * 0.03;
-                if (!target && !format.includes('First-Class') && score < 70) {
-                    p_dot *= 0.6; p_4 *= 1.5; p_6 *= 2.0;
+                
+                // Adjusted boost to be less explosive for openers to allow others to contribute
+                if (!target && !format.includes('First-Class') && score < 40) {
+                    p_dot *= 0.8; p_4 *= 1.25; p_6 *= 1.4;
                 }
                 if (aggressionFactor > 1.2) { p_dot *= 0.8; p_4 *= 1.4; p_6 *= 1.6; }
                 else if (aggressionFactor < 0.9) { p_dot *= 1.4; p_4 *= 0.7; p_6 *= 0.5; }
@@ -257,8 +259,12 @@ export const useSimulation = (gameData: GameData, setGameData: React.Dispatch<Re
             } else {
                 const oldRuns = onStrikeBatter.runs;
                 onStrikeBatter.runs += runsScored;
-                if (oldRuns < 50 && onStrikeBatter.runs >= 50 && !onStrikeBatter.ballsToFifty) { onStrikeBatter.ballsToFifty = onStrikeBatter.balls; }
-                if (oldRuns < 100 && onStrikeBatter.runs >= 100 && !onStrikeBatter.ballsToHundred) { onStrikeBatter.ballsToHundred = onStrikeBatter.balls; }
+                if (oldRuns < 50 && onStrikeBatter.runs >= 50 && !onStrikeBatter.ballsToFifty) { 
+                    onStrikeBatter.ballsToFifty = onStrikeBatter.balls; 
+                }
+                if (oldRuns < 100 && onStrikeBatter.runs >= 100 && !onStrikeBatter.ballsToHundred) { 
+                    onStrikeBatter.ballsToHundred = onStrikeBatter.balls; 
+                }
                 score += runsScored; currentBowler.runsConceded += runsScored; runsThisOver += runsScored;
                 if (runsScored === 4) onStrikeBatter.fours++;
                 if (runsScored === 6) onStrikeBatter.sixes++;

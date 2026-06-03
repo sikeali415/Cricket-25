@@ -17,7 +17,12 @@ interface LineupsProps {
     handleUpdateCaptain: (teamId: string, format: Format, playerId: string) => void;
     showFeedback: (message: string, type?: 'success' | 'error') => void;
     setGameData: React.Dispatch<React.SetStateAction<GameData | null>>;
+    viewPlayerProfile?: (player: Player) => void;
 }
+
+const InfoIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-info"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+);
 
 const LINEUP_REQUIREMENTS = [
     "Opener or Batter All-rounder",
@@ -33,7 +38,7 @@ const LINEUP_REQUIREMENTS = [
     "Bowler, Opener or Batter All-rounder",
 ];
 
-const Lineups: React.FC<LineupsProps> = ({ gameData, userTeam, handleUpdatePlayingXI, handleUpdateCaptain, showFeedback, setGameData }) => {
+const Lineups: React.FC<LineupsProps> = ({ gameData, userTeam, handleUpdatePlayingXI, handleUpdateCaptain, showFeedback, setGameData, viewPlayerProfile }) => {
     const [selectedTeamId, setSelectedTeamId] = useState(userTeam?.id || '');
     const selectedTeam = useMemo(() => gameData.teams.find(t => t.id === selectedTeamId), [gameData.teams, selectedTeamId]);
     const [category, setCategory] = useState<'T20' | 'List A' | 'First Class'>('T20');
@@ -327,6 +332,14 @@ const Lineups: React.FC<LineupsProps> = ({ gameData, userTeam, handleUpdatePlayi
                                                                 {player.id === captainId && <span className="text-[8px] bg-yellow-500 text-white px-1 rounded shadow-sm">C</span>}
                                                                 {player.role === PlayerRole.WICKET_KEEPER && <span className="text-[8px] bg-green-500 text-white px-1 rounded shadow-sm">WK</span>}
                                                                 {index < 2 && <span className="text-[8px] bg-slate-500 text-white px-1 rounded shadow-sm">OP</span>}
+                                                                {viewPlayerProfile && (
+                                                                    <button 
+                                                                        onClick={(e) => { e.stopPropagation(); viewPlayerProfile(player); }}
+                                                                        className="ml-1 text-slate-400 hover:text-teal-500 transition-colors"
+                                                                    >
+                                                                        <InfoIcon />
+                                                                    </button>
+                                                                )}
                                                             </h4>
                                                         </div>
                                                         <div className="flex items-center gap-3 mt-1">
@@ -434,7 +447,17 @@ const Lineups: React.FC<LineupsProps> = ({ gameData, userTeam, handleUpdatePlayi
                                     <div className="flex-1 min-w-0 ml-1">
                                         <div className="flex items-center gap-2">
                                             <span className={`px-1.5 py-0.5 rounded text-[9px] font-black text-white ${getRoleColor(player.role)}`}>{player.role}</span>
-                                            <h4 className="font-bold text-sm text-slate-800 dark:text-slate-100 truncate">{player.name}</h4>
+                                            <h4 className="font-bold text-sm text-slate-800 dark:text-slate-100 truncate flex items-center">
+                                                {player.name}
+                                                {viewPlayerProfile && (
+                                                    <button 
+                                                        onClick={(e) => { e.stopPropagation(); viewPlayerProfile(player); }}
+                                                        className="ml-1 text-slate-400 hover:text-teal-500 transition-colors"
+                                                    >
+                                                        <InfoIcon />
+                                                    </button>
+                                                )}
+                                            </h4>
                                             {player.isForeign && <span className="text-[8px] bg-sky-500 text-white px-1 rounded">F</span>}
                                         </div>
                                         <div className="flex items-center gap-3 mt-1">
